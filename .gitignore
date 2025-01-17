@@ -35,4 +35,5 @@ build/
 ### Mac OS files
 .DS_Store
 
-*.bak
+compose.yaml.bak
+application.properties
