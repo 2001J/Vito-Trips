@@ -36,4 +36,4 @@ build/
 .DS_Store
 
 compose.yaml.bak
-application.properties
+src/main/resources/application.properties
