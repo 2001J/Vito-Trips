@@ -2,6 +2,7 @@ package com.vitotrips.security.jwt;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -12,8 +13,13 @@ import java.util.Date;
 public class JwtProvider {
 
     @Value("${jwt.secret}")
-    private final String secretKey = "ReplaceWithAProperSecretKeyForProduction"; // Hardcoding for demo; replace with environment variables in production
-    private final Key signingKey = Keys.hmacShaKeyFor(secretKey.getBytes());
+    private String secretKey; // Hardcoding for demo; replace with environment variables in production
+    private Key signingKey;
+
+    @PostConstruct
+    public void init() {
+        signingKey = Keys.hmacShaKeyFor(secretKey.getBytes());
+    }
 
     // Generate a JWT token for a user
     public String generateToken(String email, String role) {
