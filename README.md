@@ -63,14 +63,14 @@ This versioning strategy allows for future API changes without breaking existing
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/vitotrips.git
+   git clone https://github.com/2001J/Vito-Trips
    cd vitotrips
    ```
 
 2. Set up the database:
    ```bash
    # Create PostgreSQL database
-   createdb vitotrips
+   createdb vitodb
    ```
 
 3. Configure environment variables:
@@ -101,9 +101,9 @@ Alternatively, you can use Docker to run the application:
 
 This will build and start all necessary containers (app, PostgreSQL, Redis).
 
-## API Documentation
+<!-- ## API Documentation
 
-API documentation is available at `/swagger-ui.html` when the application is running.
+API documentation is available at `/swagger-ui.html` when the application is running. -->
 
 ## Contributing
 
