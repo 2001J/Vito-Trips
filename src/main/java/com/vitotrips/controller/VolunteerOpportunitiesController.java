@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
-@RequestMapping("/volunteer-opportunities")
+@RequestMapping("/api/v1/volunteer-opportunities")
 public class VolunteerOpportunitiesController {
 
     private final VolunteerOpportunitiesService service;

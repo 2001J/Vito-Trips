@@ -17,6 +17,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Builder
+@ToString
 public class Booking {
 
     @Id
@@ -33,7 +34,7 @@ public class Booking {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = true)
+    @JoinColumn(name = "group_id")
     private Group group;
 
     @Column(name = "total_amount", precision = 10, scale = 2, nullable = false)
@@ -72,23 +73,6 @@ public class Booking {
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
-
-    @Override
-    public String toString() {
-        return "Booking{" +
-                "id=" + id +
-                ", tour=" + (tour != null ? tour.getId() : "null") +
-                ", user=" + (user != null ? user.getId() : "null") +
-                ", group=" + (group != null ? group.getId() : "null") +
-                ", totalAmount=" + totalAmount +
-                ", paidAmount=" + paidAmount +
-                ", installmentPlan=" + installmentPlan +
-                ", paymentStatus=" + paymentStatus +
-                ", bookingDate=" + bookingDate +
-                ", specialInstructions='" + specialInstructions + '\'' +
-                ", bookingType=" + bookingType +
-                '}';
-    }
 
     public enum PaymentStatus {
         PENDING, CONFIRMED, FAILED, REFUNDED

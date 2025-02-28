@@ -5,7 +5,6 @@ import com.vitotrips.model.UserRole;
 import com.vitotrips.repository.UserRepository;
 import com.vitotrips.service.UserService;
 import jakarta.transaction.Transactional;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -56,10 +55,5 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean existsByEmail(String email) {
         return userRepository.findByEmail(email).isPresent();
-    }
-
-    @Override
-    public UserDetails loadUserByUsername(String userEmail) throws UsernameNotFoundException {
-        return getUserByEmail(userEmail); // This works because User implements UserDetails
     }
 }

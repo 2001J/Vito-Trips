@@ -1,21 +1,43 @@
 package com.vitotrips.security.jwt;
 
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.web.AuthenticationEntryPoint;
+import org.springframework.security.web.server.ServerAuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 
-
-import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 @Component
-public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
+public class JwtAuthenticationEntryPoint implements ServerAuthenticationEntryPoint {
 
     @Override
-    public void commence(HttpServletRequest request, HttpServletResponse response,
-                         AuthenticationException authException) throws IOException {
-        // Return 401 when authentication is required but not provided/invalid
-        response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Access Denied: Please authenticate to access this resource.");
+    public Mono<Void> commence(ServerWebExchange exchange, AuthenticationException ex) {
+        ServerHttpResponse response = exchange.getResponse();
+        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        
+        String responseBody = "{\"error\":\"Access Denied: Please authenticate to access this resource.\"}";
+        byte[] bytes = responseBody.getBytes(StandardCharsets.UTF_8);
+        DataBuffer buffer = response.bufferFactory().wrap(bytes);
+        
+        return response.writeWith(Mono.just(buffer));
+    }
+    
+    // Keep this method for backward compatibility with the SecurityConfig
+    public void commence(ServerHttpRequest request, ServerHttpResponse response, AuthenticationException ex) {
+        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
+        
+        String responseBody = "{\"error\":\"Access Denied: Please authenticate to access this resource.\"}";
+        byte[] bytes = responseBody.getBytes(StandardCharsets.UTF_8);
+        DataBuffer buffer = response.bufferFactory().wrap(bytes);
+        
+        response.writeWith(Mono.just(buffer)).subscribe();
     }
 }

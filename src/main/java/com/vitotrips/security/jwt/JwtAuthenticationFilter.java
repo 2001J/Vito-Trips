@@ -1,59 +1,60 @@
 package com.vitotrips.security.jwt;
 
-import com.vitotrips.model.User;
 import com.vitotrips.service.UserService;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import org.springframework.web.server.ServerWebExchange;
+import org.springframework.web.server.WebFilter;
+import org.springframework.web.server.WebFilterChain;
+import reactor.core.publisher.Mono;
 
 @Component
-public class JwtAuthenticationFilter extends OncePerRequestFilter {
+public class JwtAuthenticationFilter implements WebFilter {
 
     private final JwtProvider jwtProvider;
-    private final UserService userService;
+    private final ReactiveUserDetailsService userDetailsService;
 
-    public JwtAuthenticationFilter(JwtProvider jwtProvider, UserService userService) {
+    public JwtAuthenticationFilter(JwtProvider jwtProvider, ReactiveUserDetailsService userDetailsService) {
         this.jwtProvider = jwtProvider;
-        this.userService = userService;
+        this.userDetailsService = userDetailsService;
     }
 
     @Override
-    protected boolean shouldNotFilter(HttpServletRequest request) {
-        // Exclude `/auth/login` from filtering
-        return request.getServletPath().equals("/auth/login");
-    }
-
-    @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain) throws java.io.IOException, jakarta.servlet.ServletException {
+    public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
+        ServerHttpRequest request = exchange.getRequest();
+        
+        // Skip authentication for login endpoint
+        if (request.getPath().value().equals("/api/v1/auth/login")) {
+            return chain.filter(exchange);
+        }
+        
         String token = extractToken(request);
+        
         if (token != null && jwtProvider.validateToken(token)) {
             String userEmail = jwtProvider.extractEmail(token);
-
-            // Load the user based on the email and set the authentication context
-            UserDetails userDetails = userService.loadUserByUsername(userEmail);
-            UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            
+            return userDetailsService.findByUsername(userEmail)
+                .map(userDetails -> {
+                    UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                            userDetails, null, userDetails.getAuthorities());
+                    return authentication;
+                })
+                .flatMap(authentication -> 
+                    chain.filter(exchange)
+                        .contextWrite(ReactiveSecurityContextHolder.withAuthentication(authentication))
+                );
         }
-
-        filterChain.doFilter(request, response);
+        
+        return chain.filter(exchange);
     }
 
-    private String extractToken(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
+    private String extractToken(ServerHttpRequest request) {
+        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7); // Remove "Bearer " prefix
         }

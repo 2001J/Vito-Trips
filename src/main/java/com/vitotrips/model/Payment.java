@@ -1,7 +1,10 @@
 package com.vitotrips.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
@@ -26,23 +29,45 @@ public class Payment {
     private Booking booking;
 
     @Column(name = "amount", precision = 10, scale = 2, nullable = false)
-    @DecimalMin(value = "0.0", inclusive = false, message = "Payment amount must be positive")
+    @NotNull
     private BigDecimal amount;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "payment_method", nullable = false)
-    private PaymentMethod paymentMethod;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_status", nullable = false)
     private PaymentStatus paymentStatus;
 
-    @Column(name = "transaction_id", unique = true, nullable = false)
-    private String transactionId;
+    @Column(name = "processor_payment_id")
+    private String processorPaymentId;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "processor_fee", precision = 10, scale = 2)
+    private BigDecimal processorFee;
+
+    @Column(name = "payment_method")
+    private String paymentMethod;
+
+    @Column(name = "payment_date")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    private LocalDateTime paymentDate;
+
+    @Column(name = "refund_date")
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    private LocalDateTime refundDate;
+
+    @Column(name = "refund_amount", precision = 10, scale = 2)
+    private BigDecimal refundAmount;
+
+    @Column(name = "refund_reason")
+    private String refundReason;
+
+    @CreatedDate
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @LastModifiedDate
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+    @Column(name = "updated_at", nullable = false)
+    private LocalDateTime updatedAt;
 
     /**
      * Payment method options like CREDIT_CARD, PAYPAL, etc.
@@ -55,6 +80,6 @@ public class Payment {
      * Payment status options like PENDING, SUCCESS, etc.
      */
     public enum PaymentStatus {
-        PENDING, SUCCESS, FAILED
+        PENDING, CONFIRMED, FAILED, REFUNDED
     }
 }

@@ -32,8 +32,64 @@ build/
 ### VS Code ###
 .vscode/
 
-### Mac OS files
-.DS_Store
+### Node.js ###
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
 
+### Environment Variables ###
+.env
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+### Build Output ###
+/src/main/resources/static/dist/
+
+### Logs ###
+logs/
+*.log
+
+### OS Files ###
+.DS_Store
+Thumbs.db
+
+### Sensitive Data ###
+application-dev.properties
+application-prod.properties
+src/main/resources/application-dev.properties
+src/main/resources/application-prod.properties
+
+### Docker ###
 compose.yaml.bak
-src/main/resources/application.properties
+*.env.docker
+
+### Test Coverage ###
+/coverage/
+
+### Compiled class files ###
+*.class
+
+### Package files ###
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+### JVM crash logs ###
+hs_err_pid*
+
+### Application Properties with Sensitive Data ###
+# Keep application.properties in version control but with placeholder values
+# src/main/resources/application.properties
+
+### Temporary files ###
+*~
+*.swp
+*.swo

@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/groups/members")
+@RequestMapping("/api/v1/groups/members")
 public class GroupMemberController {
 
     private final GroupMemberService groupMemberService;

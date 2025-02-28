@@ -1,5 +1,6 @@
 package com.vitotrips.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -42,6 +43,7 @@ public class Tour {
 
     @OneToMany(mappedBy = "tour", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
+    @JsonIgnore // Add this annotation to prevent LazyInitializationException
     private List<Group> groups = new ArrayList<>();
 
     @CreatedDate // Automatically populated on create

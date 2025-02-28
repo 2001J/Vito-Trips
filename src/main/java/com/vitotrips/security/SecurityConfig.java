@@ -5,69 +5,104 @@ import com.vitotrips.security.jwt.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.authentication.ReactiveAuthenticationManager;
+import org.springframework.security.authentication.UserDetailsRepositoryReactiveAuthenticationManager;
+import org.springframework.security.config.annotation.method.configuration.EnableReactiveMethodSecurity;
+import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
+import org.springframework.security.config.web.server.SecurityWebFiltersOrder;
+import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.core.userdetails.ReactiveUserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.context.NoOpServerSecurityContextRepository;
+import reactor.core.publisher.Mono;
 
 @Configuration
-@EnableMethodSecurity
+@EnableWebFluxSecurity
+@EnableReactiveMethodSecurity
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final ReactiveUserDetailsService userDetailsService;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
-                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint) {
+                          JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
+                          ReactiveUserDetailsService userDetailsService) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
+        this.userDetailsService = userDetailsService;
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+    public SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
+        return http
+                .csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
+                .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
+                .securityContextRepository(NoOpServerSecurityContextRepository.getInstance())
+                .exceptionHandling(exceptionHandlingSpec -> 
+                    exceptionHandlingSpec.authenticationEntryPoint(
+                        (exchange, ex) -> Mono.fromCallable(() -> {
+                            jwtAuthenticationEntryPoint.commence(exchange.getRequest(), exchange.getResponse(), ex);
+                            return null;
+                        })
+                    )
                 )
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                )
-                .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/auth/login").permitAll()
-                        .requestMatchers("/auth/register").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/users/email/{email}").permitAll()
-                        .requestMatchers(
+                .authorizeExchange(exchanges -> exchanges
+                        // Public API endpoints - new routes with /api/v1/ prefix
+                        .pathMatchers("/api/v1/auth/login").permitAll()
+                        .pathMatchers("/api/v1/auth/register").permitAll()
+                        .pathMatchers(HttpMethod.GET.name(), "/api/v1/users/email/{email}").permitAll()
+                        .pathMatchers(HttpMethod.GET.name(), "/api/v1/tours").permitAll()
+                        .pathMatchers(HttpMethod.GET.name(), "/api/v1/tours/{id}").permitAll()
+                        
+                        // Block old API endpoints to ensure they're not accessible
+                        .pathMatchers("/auth/**").denyAll()
+                        .pathMatchers("/api/users/**").denyAll()
+                        .pathMatchers("/api/tours/**").denyAll()
+                        .pathMatchers("/api/bookings/**").denyAll()
+                        .pathMatchers("/api/groups/**").denyAll()
+                        .pathMatchers("/api/reviews/**").denyAll()
+                        .pathMatchers("/api/volunteer-opportunities/**").denyAll()
+                        .pathMatchers("/api/payments/**").denyAll()
+                        
+                        // Frontend routes - allow all Vue.js routes
+                        .pathMatchers("/", "/index.html", "/login", "/register", "/tours", "/tours/**", "/home").permitAll()
+                        
+                        // Static resources
+                        .pathMatchers("/js/**", "/css/**", "/img/**", "/favicon.ico").permitAll()
+                        .pathMatchers("/static/**", "/resources/**").permitAll()
+                        .pathMatchers("/templates/**").permitAll()
+                        
+                        // Swagger UI
+                        .pathMatchers(
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
-                                "/swagger-ui/**"
-
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
                         ).permitAll()
 
                         // Admin only endpoints
-                        .requestMatchers(HttpMethod.POST, "/users").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.GET, "/users/role/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/users/**").hasRole("ADMIN")
+                        .pathMatchers(HttpMethod.POST.name(), "/api/v1/users").hasRole("ADMIN")
+                        .pathMatchers(HttpMethod.GET.name(), "/api/v1/users/role/**").hasRole("ADMIN")
+                        .pathMatchers(HttpMethod.DELETE.name(), "/api/v1/users/**").hasRole("ADMIN")
 
                         // Tour Operator and Admin endpoints
-                        .requestMatchers(HttpMethod.GET, "/users").hasAnyRole("ADMIN", "TOUR_OPERATOR")
+                        .pathMatchers(HttpMethod.GET.name(), "/api/v1/users").hasAnyRole("ADMIN", "TOUR_OPERATOR")
 
                         // Accessible by all authenticated users (Traveler, Tour Operator, Admin)
-                        .requestMatchers(HttpMethod.GET, "/users/{id}").hasAnyRole("ADMIN", "TOUR_OPERATOR", "TRAVELER")
+                        .pathMatchers(HttpMethod.GET.name(), "/api/v1/users/{id}").hasAnyRole("ADMIN", "TOUR_OPERATOR", "TRAVELER")
 
-                        // Any other request needs authentication
-                        .anyRequest().authenticated()
+                        // API endpoints that require authentication
+                        .pathMatchers("/api/v1/**").authenticated()
+                        
+                        // Allow all other requests (for frontend routing)
+                        .anyExchange().permitAll()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
+                .addFilterAt(jwtAuthenticationFilter, SecurityWebFiltersOrder.AUTHENTICATION)
+                .build();
     }
 
     @Bean
@@ -76,7 +111,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
+    public ReactiveAuthenticationManager reactiveAuthenticationManager() {
+        UserDetailsRepositoryReactiveAuthenticationManager authenticationManager = 
+            new UserDetailsRepositoryReactiveAuthenticationManager(userDetailsService);
+        authenticationManager.setPasswordEncoder(passwordEncoder());
+        return authenticationManager;
     }
 }
