@@ -58,19 +58,19 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       run: |
         mvn jacoco:prepare-agent test jacoco:report
-        mvn sonar:sonar -Dsonar.projectKey=vitotrips -Dsonar.organization=vitotrips
+        mvn sonar:sonar -Dsonar.projectKey=2001J_Vito-Trips -Dsonar.organization=jkoyi
     
     - name: Build Docker image
-      run: docker build -t vitotrips:${{ github.sha }} .
+      run: docker build -t 2001j-vito-trips:${{ github.sha }} .
     
     - name: Save Docker image
-      run: docker save vitotrips:${{ github.sha }} > vitotrips.tar
+      run: docker save 2001j-vito-trips:${{ github.sha }} > vito-trips.tar
     
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: vitotrips-docker-image
-        path: vitotrips.tar
+        name: vito-trips-docker-image
+        path: vito-trips.tar
   
   deploy-dev:
     needs: build
@@ -83,10 +83,10 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
-        name: vitotrips-docker-image
+        name: vito-trips-docker-image
     
     - name: Load Docker image
-      run: docker load < vitotrips.tar
+      run: docker load < vito-trips.tar
     
     - name: Deploy to development environment
       run: |
@@ -105,10 +105,10 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v4
       with:
-        name: vitotrips-docker-image
+        name: vito-trips-docker-image
     
     - name: Load Docker image
-      run: docker load < vitotrips.tar
+      run: docker load < vito-trips.tar
     
     - name: Deploy to production environment
       run: |
